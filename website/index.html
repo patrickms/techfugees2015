@@ -47,7 +47,7 @@
   
   var firebaseRoot = new Firebase("https://techfugees2015.firebaseio.com/");
   var allQuestions = firebaseRoot.child("allQuestions");
-  allQuestions.on("value", function(data){updateGrid(data.val)});
+  allQuestions.on("value", function(data){updateGrid(data.val())});
   
   function updateGrid(data)
   {
