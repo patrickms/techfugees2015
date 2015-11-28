@@ -37,13 +37,13 @@
   {
     response=window.prompt("What is your answer in English","")
     if(response && response.length>0)
-      allQuestions.child("id").child("englishanswer").set(response)
+      allQuestions.child(id).child("englishanswer").set(response);
   }
   function answerNative(id, user, lang)
   {
     response=window.prompt("What is your answer in "+getLanguageName(lang),"")
     if(response && response.length>0)
-      allQuestions.child("id").child("nativeanswer").set(response)
+      allQuestions.child(id).child("nativeanswer").set(response);
   }
   
   function getSpeechLanguage(lang)
