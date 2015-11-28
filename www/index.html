@@ -34,17 +34,63 @@
 		  <script type="text/javascript" src="js/firebase.js"></script>
 		  <script type="text/javascript" src="cordova.js"></script>
 		  <script type="text/javascript" src="js/app.js"></script>
-		  <script type="text/javascript" src="js/appconfig.js"></script>
-		  <script src="js/mstranslator.js"></script>
+		  <script type="text/javascript" src="js/apiconfig.js"></script>
+		  <!--<script src="js/mstranslator.js"></script>-->
         <title>ConneX</title>
         
         <script>
-        var myFirebaseRef;
-        if(!window.firebaseURL)
+        var firebaseRoot;
+        var bingTranslateToken;
+        
+        function translateWithToken(from, to, text, nextFunction)
+        {
+        	$.ajax({
+				type: "GET",
+				url: "http://api.microsofttranslator.com/V2/Ajax.svc/Translate" +
+					"?appId=Bearer " + encodeURIComponent(bingTranslateToken.access_token) +
+					"&from=" + encodeURIComponent(from) +
+					"&to=" + encodeURIComponent(to) +
+					"&text=" + encodeURIComponent(text), // +
+					// "&oncomplete=mycallback",
+				success: nextFunction,
+				datatype: "text",
+			});
+        }
+        
+        function getToken(nextFunction)
+        {
+        	$.ajax({
+			  type: "POST",
+			  url: "https://datamarket.accesscontrol.windows.net/v2/OAuth2-13",
+			  data: 'client_id='+encodeURIComponent(window.azureClientId)+'&client_secret='+encodeURIComponent(window.azureClientSecret)+'&scope=http://api.microsofttranslator.com&grant_type=client_credentials',
+			  success: function(data){
+					//alert(JSON.stringify(data));
+					bingTranslateToken=data;
+					nextFunction();
+				  },
+			  dataType: "json",
+			})
+        }
+        
+        function translate(from, to, text, nextFunction)
+        {
+        	if(bingTranslateToken) //Should check for expiry also
+        	{
+        		translateWithToken(from, to, text, nextFunction);
+        	}
+        	else
+        	{
+        		getToken(function(){translateWithToken(from, to, text, nextFunction);});
+        	}
+        }
+        
+        if(!window.firebaseURL || !window.azureClientId || !window.azureClientSecret )
         	alert("www/js/appconfig.js is missing. You must sign up for firebase and azure accounts and put the keys in this file");
         else{
-        myFirebaseRef = new Firebase(firebaseURL);
-        	alert("OK");
+        	firebaseRoot = new Firebase(firebaseURL);
+			translate("en", "es", "Hello there!", function(data){
+				alert(data);
+			});
         }
         </script>
     </head>
@@ -104,7 +150,6 @@ function onDeviceReady() {
             q.form.submit();
         }
     }
-    alert("hi");
 }
 $(document).ready(function(){
 	if(!window.cordova)
