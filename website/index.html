@@ -24,6 +24,7 @@
 <script>
   var firebaseRoot = new Firebase("https://techfugees2015.firebaseio.com/");
   var allQuestions = firebaseRoot.child("allQuestions");
+  var userQuestions = firebaseRoot.child("userQuestions");
   allQuestions.on("value", function(data){updateGrid(data.val())});
   
   var tableRowPrototype='<div class="table-row">\n'+
@@ -45,13 +46,19 @@
   {
     response=window.prompt("What is your answer in English","")
     if(response && response.length>0)
+    {
       allQuestions.child(id).child("englishanswer").set(response);
+      userQuestions.child(user).child(id).child("englishanswer").set(response);
+    }
   }
   function answerNative(id, user, lang)
   {
     response=window.prompt("What is your answer in "+getLanguageName(lang),"")
     if(response && response.length>0)
+    {
       allQuestions.child(id).child("nativeanswer").set(response);
+      userQuestions.child(user).child(id).child("nativeanswer").set(response);
+    }
   }
   
   function getSpeechLanguage(lang)
