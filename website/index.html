@@ -70,6 +70,27 @@
   	return languageNames[lang];
   }
   
+  function loadMap(mapcounter, lon, lat)
+  {
+    var map = new OpenLayers.Map("mapdiv"+mapcounter);
+    map.addLayer(new OpenLayers.Layer.OSM());
+ 
+    var lonLat = new OpenLayers.LonLat( lon, lat )
+          .transform(
+            new OpenLayers.Projection("EPSG:4326"), // transform from WGS 1984
+            map.getProjectionObject() // to Spherical Mercator Projection
+          );
+ 
+    var zoom=16;
+ 
+    var markers = new OpenLayers.Layer.Markers( "Markers" );
+    map.addLayer(markers);
+ 
+    markers.addMarker(new OpenLayers.Marker(lonLat));
+ 
+    map.setCenter (lonLat, zoom);
+  }
+  
   function updateGrid(data)
   {
     var keys = [];
@@ -113,23 +134,7 @@
       
       if(row.position && row.position.coords)
       {
-        var map = new OpenLayers.Map("mapdiv"+mapcounter);
-        map.addLayer(new OpenLayers.Layer.OSM());
-     
-        var lonLat = new OpenLayers.LonLat( row.position.coords.longitude, row.position.coords.latitude )
-              .transform(
-                new OpenLayers.Projection("EPSG:4326"), // transform from WGS 1984
-                map.getProjectionObject() // to Spherical Mercator Projection
-              );
-     
-        var zoom=16;
-     
-        var markers = new OpenLayers.Layer.Markers( "Markers" );
-        map.addLayer(markers);
-     
-        markers.addMarker(new OpenLayers.Marker(lonLat));
-     
-        map.setCenter (lonLat, zoom);
+        html+="<script>\nloadMap("+mapcounter+","row.position.coords.longitude+","+row.positions.coords.latitude+");\n</script>\n"; 
       }
       mapcounter++
     }
