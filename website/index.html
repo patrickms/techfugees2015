@@ -113,7 +113,7 @@
       
       if(row.position && row.position.coords)
       {
-        var map = new OpenLayers.Map("mapdiv"+mapCounter++);
+        var map = new OpenLayers.Map("mapdiv"+mapcounter);
         map.addLayer(new OpenLayers.Layer.OSM());
      
         var lonLat = new OpenLayers.LonLat( row.positions.coords.longitude, row.positions.coords.latitude )
