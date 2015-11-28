@@ -32,6 +32,6 @@ plugins
 
 # I am going to put app secret keys into apiconfig.js
 # These keys DO NOT belong in a public git repo.
-apiconfig.js
-*/apiconfig.js
-*/*/apiconfig.js
+appconfig.js
+*/appconfig.js
+*/*/appconfig.js
