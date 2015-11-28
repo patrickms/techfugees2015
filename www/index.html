@@ -39,22 +39,70 @@
         <title>ConneX</title>
         
         <script>
+        var language="en";
+        function getSpeechLanguage()
+        {
+			var speechLanguages={ "en":"en-US", "es":"es-US", "zh":"zh-CN", "ar":"ar-AE" };
+        	return speechLanguages[language];
+        }
+        function getTranslationLanguage()
+        {
+	        var translateLanguages={ "en":"en", "es":"es", "zh":"zh-CHS", "ar":"ar" };
+        	return translateLanguages[language];
+        }
+        function getLanguageName()
+        {
+	        var languageNames={ "en":"English", "es":"español", "zh":"中文", "ar":"العربية" };
+        	return languageNames[language];
+	    }
+        function getLocalString( message )
+        {
+			var localStrings={
+				"en": {
+						"didyousay": 'Did you say "<XYZ>"',
+					},
+				"es": {
+						"didyousay": '¿Has dicho "<XYZ>"?',
+					},
+				"ar": {
+						"didyousay": 'هل قلت "<XYZ>"؟',
+					},
+				"zh": {
+						"didyousay": '你说的 "<XYZ>"?',
+					},
+			};
+        	return localStrings[language][message];
+	    }
+        </script>
+        <script>
         var firebaseRoot;
         var bingTranslateToken;
+        var userId="DESKTOPTESTER";
+        var deviceReady=false;
+        var userLanguage=null;
         
         function translateWithToken(from, to, text, nextFunction)
         {
-        	$.ajax({
-				type: "GET",
-				url: "http://api.microsofttranslator.com/V2/Ajax.svc/Translate" +
-					"?appId=Bearer " + encodeURIComponent(bingTranslateToken.access_token) +
-					"&from=" + encodeURIComponent(from) +
-					"&to=" + encodeURIComponent(to) +
-					"&text=" + encodeURIComponent(text), // +
-					// "&oncomplete=mycallback",
-				success: nextFunction,
-				datatype: "text",
-			});
+        	if(from==to)
+        		nextFunction(text);
+        	else
+				$.ajax({
+					type: "GET",
+					url: "http://api.microsofttranslator.com/V2/Ajax.svc/Translate" +
+						"?appId=Bearer " + encodeURIComponent(bingTranslateToken.access_token) +
+						"&from=" + encodeURIComponent(from) +
+						"&to=" + encodeURIComponent(to) +
+						"&text=" + encodeURIComponent(text), // +
+						// "&oncomplete=mycallback",
+					success: function(data){
+						var data2=JSON.parse(data);
+						if(data2.startsWith("ArgumentException: The incoming token has expired"))
+							translate(from, to, text, nextFunction);
+						else
+							nextFunction(data2);
+					},
+					datatype: "text",
+				});
         }
         
         function getToken(nextFunction)
@@ -74,25 +122,107 @@
         
         function translate(from, to, text, nextFunction)
         {
-        	if(bingTranslateToken) //Should check for expiry also
-        	{
-        		translateWithToken(from, to, text, nextFunction);
-        	}
+        	if(from==to)
+        		nextFunction(text);
         	else
         	{
-        		getToken(function(){translateWithToken(from, to, text, nextFunction);});
-        	}
+				if(bingTranslateToken) //Should check for expiry also
+				{
+					translateWithToken(from, to, text, nextFunction);
+				}
+				else
+				{
+					getToken(function(){translateWithToken(from, to, text, nextFunction);});
+				}
+			}
         }
         
         if(!window.firebaseURL || !window.azureClientId || !window.azureClientSecret )
         	alert("www/js/appconfig.js is missing. You must sign up for firebase and azure accounts and put the keys in this file");
         else{
         	firebaseRoot = new Firebase(firebaseURL);
-			translate("en", "es", "Hello there!", function(data){
-				console.log("Translated", data);
-			});
+        	// for testing
+			// translate("en", "es", "Hello there!", function(data){
+			//	console.log("Translated", data);
+			// });
 		}
         </script>
+        
+        <script type="text/javascript">
+		var recognition;
+		var isTranslated=false;
+		
+		function setTranslated(translated)
+		{
+			isTranslated=translated;
+			if(isTranslated)
+			{
+				$(".accept-question-button").removeClass("pure-button-disabled");
+			} else
+				$(".accept-question-button").addClass("pure-button-disabled");
+		}
+
+		function setupRecognition()
+		{
+			var MySpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition; 
+			if(MySpeechRecognition)
+			{
+				recognition = new MySpeechRecognition();
+				recognition.lang = getSpeechLanguage(); //"zh-CN"; //"ar-AE";
+				recognition.onresult = function(event) {
+					setTranslated(false);
+					if (event.results.length > 0) {
+						var result = event.results[0][0].transcript;
+						$(".native-q").val( result );
+						$(".ask-button").hide();
+						$(".ask-results").show();
+						translate(getTranslationLanguage(), "en", result, function(data){
+							$(".english-q").val( data );
+							setTranslated(true);
+						});
+					}
+				}
+				$(".ask-button").show();
+			}
+		}
+		
+		function rejectQuestion()
+		{
+			$(".ask-results").hide();
+			$(".ask-button").show();
+		}
+		
+		function acceptQuestion()
+		{
+			$(".ask-results").hide();
+			$(".ask-button").show();
+			
+		}
+		
+		function onDeviceReady() {
+			deviceReady=true;
+			if(window.cordova)
+			{
+				userId=device.uuid;
+			}
+			setupRecognition();
+		}
+		
+		function setLanguage(lang)
+		{
+			$(".language-choice-"+language).removeClass("pure-menu-selected");
+			language=lang;
+			$(".language-choice-"+language).addClass("pure-menu-selected");
+			setupRecognition();
+		}
+		
+		$(document).ready(function(){
+			if(window.cordova)	
+				document.addEventListener('deviceready', onDeviceReady, false);
+			else
+				onDeviceReady();
+		});
+		</script>
     </head>
     <body>
     
@@ -103,12 +233,11 @@
 
 <div class="header">
     <div class="home-menu pure-menu pure-menu-horizontal pure-menu-fixed">
-        <a class="pure-menu-heading" href="">Your Site</a>
-
         <ul class="pure-menu-list">
-            <li class="pure-menu-item pure-menu-selected"><a href="#" class="pure-menu-link">Home</a></li>
-            <li class="pure-menu-item"><a href="#" class="pure-menu-link">Tour</a></li>
-            <li class="pure-menu-item"><a href="#" class="pure-menu-link">Sign Up</a></li>
+            <li class="language-choice-en pure-menu-item pure-menu-selected"><a onclick="setLanguage('en')" class="pure-menu-link">English</a></li>
+            <li class="language-choice-es pure-menu-item"><a onclick="setLanguage('es')" class="pure-menu-link">español</a></li>
+            <li class="language-choice-ar pure-menu-item"><a onclick="setLanguage('ar')" class="pure-menu-link">العربية</a></li>
+            <li class="language-choice-zh pure-menu-item"><a onclick="setLanguage('zh')" class="pure-menu-link">中文</a></li>
         </ul>
     </div>
 </div>
@@ -125,6 +254,30 @@
     </div>
 </div>
 -->
+<div class="splash-container">
+    <div class="splash">
+        <p class="splash-subhead">
+			<form action="http://www.example.com/search">
+				
+				<img class="ask-button" style="display:none;width:1in;height=1in" src="img/HAL9000.svg" onclick="recognition.start()"></img>
+					
+				<div class="ask-results" style="display:visible;">
+					<input type="search" class="native-q" name="nativeQ" style="width:100%">
+					<input type="search" class="english-q" name="englishQ" style="width:100%">
+					<div class="pure-g">
+						<div class="pure-u-1-3"><button class="pure-button pure-button-disabled accept-question-button" onclick="acceptQuestion()" style="font-size:54pt;text-align:center">
+							😀
+						</button></div>
+						<div class="pure-u-1-3"><p>Thirds</p></div>
+						<div class="pure-u-1-3"><button class="pure-button reject-question-button" onclick="rejectQuestion()" style="font-size:54pt;text-align:center">
+							😟
+						</button></div>
+					</div>
+				</div>
+			</form>
+        </p>
+    </div>
+</div>
 <div class="content-wrapper">
     <div class="content">
         <h2 class="content-head is-center">Excepteur sint occaecat cupidatat.</h2>
@@ -136,38 +289,6 @@
                     <i class="fa fa-rocket"></i>
                     Get Started Quickly
                 </h3>
-                <script type="text/javascript">
-var recognition;
-document.addEventListener('deviceready', onDeviceReady, false);
-
-function onDeviceReady() {
-	var MySpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition; 
-    recognition = new MySpeechRecognition();
-    recognition.lang = "es-US"; //"zh-CN"; //"ar-AE";
-    recognition.onresult = function(event) {
-        if (event.results.length > 0) {
-            var result = event.results[0][0].transcript;
-            q.value = result;
-            translate("es", "en", result, function(data){ //was "ar" then "zh-CHS"
-				q.value = data;
-			});
-        }
-    }
-    if(window.cordova)
-    {
-    	alert(device.uuid);
-    }
-}
-$(document).ready(function(){
-	if(!window.cordova)
-		onDeviceReady();
-});
-</script>
-
-<form action="http://www.example.com/search">
-    <input type="search" id="q" name="q" size=60>
-    <input type="button" value="Click to Speak" onclick="recognition.start()">
-</form>
                 <p>
                     Phasellus eget enim eu lectus faucibus vestibulum. Suspendisse sodales pellentesque elementum.
                 </p>
