@@ -1,1 +1,0 @@
-window.firebaseURL = "https://techfugees2015.firebaseio.com/"
