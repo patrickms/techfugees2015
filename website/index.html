@@ -7,6 +7,11 @@
     border-style: groove;
     width:100%;
   }
+  
+  .main-table {
+    width:100%;
+    border-style: double;
+  }
 </style>
 <script src="https://cdn.firebase.com/js/client/2.3.2/firebase.js"></script>
 <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
@@ -81,7 +86,9 @@
       rowHTML=rowHTML.replace("$ENGLISH_ANSWER",row.englishanswer ||"<No English answer>");
       rowHTML=rowHTML.replace("$NATIVE_ANSWER",row.nativeanswer ||"<No native language answer>");
       rowHTML=rowHTML.replace("$NATIVE_LANG",row.nativelanguage ||"<Language unknown>");
+      html+=rowHTML;
     }
+    $(".main-table").html(html);
   }
 </script>
 </head>
@@ -94,7 +101,7 @@
         <li class="pure-menu-item"><a href="#" class="pure-menu-link">Finance</a></li>
     </ul>
 </div>
-<div class="pure-g" style="width:100%;border-style: double;">
+<div class="pure-g main-table">
   <div class="table-row">
     <div class = "pure-u-1-4">
       Answer:  <div onclick="answerEnglish('$ID','$USER')" class = "pure-button">en</div> &nbsp; <div onclick="answerNative('$ID','$USER')" class = "pure-button">$NATIVE_LANG</div><br>
