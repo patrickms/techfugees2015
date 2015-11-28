@@ -16,10 +16,14 @@
 <script src="https://cdn.firebase.com/js/client/2.3.2/firebase.js"></script>
 <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
 <script>
+  var firebaseRoot = new Firebase("https://techfugees2015.firebaseio.com/");
+  var allQuestions = firebaseRoot.child("allQuestions");
+  allQuestions.on("value", function(data){updateGrid(data.val())});
+  
   var tableRowPrototype='<div class="table-row">\n'+
     '<div class = "pure-u-1-4">\n'+
-      'Answer:  <div onclick="answerEnglish(\'$ID\', \'$USER\')" class = "pure-button">en</div> &nbsp;\n'+
-      '<div onclick="answerNative(\'$ID\', \'$USER\')" class = "pure-button">$NATIVE_LANG</div><br>\n'+
+      'Answer:  <div onclick="answerEnglish(\'$ID\', \'$USER\', \'$NATIVE_LANG\')" class = "pure-button">en</div> &nbsp;\n'+
+      '<div onclick="answerNative(\'$ID\', \'$USER\', \'$NATIVE_LANG\')" class = "pure-button">$NATIVE_LANG</div><br>\n'+
     '</div>\n'+
     '<div class = "pure-u-3-4">\n'+
       '$ENGLISH_QUESTION<br>\n'+
@@ -28,6 +32,19 @@
       '$NATIVE_ANSWER\n'+
     '</div>\n'+
   '</div>\n';
+  
+  function answerEnglish(id, user, lang)
+  {
+    response=window.prompt("What is your answer in English","")
+    if(response && response.length>0)
+      allQuestions.child("id").child("englishanswer").set(response)
+  }
+  function answerNative(id, user, lang)
+  {
+    response=window.prompt("What is your answer in "+getLanguageName(lang),"")
+    if(response && response.length>0)
+      allQuestions.child("id").child("nativeanswer").set(response)
+  }
   
   function getSpeechLanguage(lang)
   {
@@ -44,10 +61,6 @@
     var languageNames={ "en":"English", "es":"español", "zh":"中文", "ar":"العربية" };
   	return languageNames[lang];
   }
-  
-  var firebaseRoot = new Firebase("https://techfugees2015.firebaseio.com/");
-  var allQuestions = firebaseRoot.child("allQuestions");
-  allQuestions.on("value", function(data){updateGrid(data.val())});
   
   function updateGrid(data)
   {
@@ -102,17 +115,6 @@
     </ul>
 </div>
 <div class="pure-g main-table">
-  <div class="table-row">
-    <div class = "pure-u-1-4">
-      Answer:  <div onclick="answerEnglish('$ID','$USER')" class = "pure-button">en</div> &nbsp; <div onclick="answerNative('$ID','$USER')" class = "pure-button">$NATIVE_LANG</div><br>
-    </div>
-    <div class = "pure-u-3-4">
-      $ENGLISH_QUESTION<br>
-      $NATIVE_QUESTION<br>
-      $ENGLISH_ANSWER<br>
-      $NATIVE_ANSWER
-    </div>
-  </div>
 </div>
 </body>
 </html>
