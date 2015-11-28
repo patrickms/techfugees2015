@@ -12,6 +12,11 @@
     width:100%;
     border-style: double;
   }
+  
+  .map-div{
+    width:100%;
+    height:100pt;
+  }
 </style>
 <script src="https://cdn.firebase.com/js/client/2.3.2/firebase.js"></script>
 <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
@@ -26,11 +31,13 @@
       'Answer:  <div onclick="answerEnglish(\'$ID\', \'$USER\', \'$NATIVE_LANG\')" class = "pure-button">en</div> &nbsp;\n'+
       '<div onclick="answerNative(\'$ID\', \'$USER\', \'$NATIVE_LANG\')" class = "pure-button">$NATIVE_LANG</div><br>\n'+
     '</div>\n'+
-    '<div class = "pure-u-3-4">\n'+
+    '<div class = "pure-u-1-2">\n'+
       '$ENGLISH_QUESTION<br>\n'+
       '$NATIVE_QUESTION<br>\n'+
       '$ENGLISH_ANSWER<br>\n'+
       '$NATIVE_ANSWER\n'+
+    '</div>\n'+
+    '<div id = "mapdiv$MAPDIVID" class = "pure-u-1-4 map-div">\n'+
     '</div>\n'+
   '</div>\n';
   
@@ -66,7 +73,7 @@
   function updateGrid(data)
   {
     var keys = [],
-    k, i, len;
+    var k, i, len;
   
     for (k in data) {
       if (data.hasOwnProperty(k)) {
@@ -88,7 +95,8 @@
     
     len = keys.length;
     
-    html = ""
+    var html = ""
+    var mapcounter=1;
     for (i = 0; i < len; i++) {
       k = keys[i];
       row=data[k];
@@ -100,7 +108,30 @@
       rowHTML=rowHTML.replace(/\$ENGLISH_ANSWER/g,row.englishanswer ||"<No English answer>");
       rowHTML=rowHTML.replace(/\$NATIVE_ANSWER/g,row.nativeanswer ||"<No native language answer>");
       rowHTML=rowHTML.replace(/\$NATIVE_LANG/g,row.nativelanguage ||"<Language unknown>");
+      rowHTML=rowHTML.replace(/\$MAPDIVID/g,mapcounter);
       html+=rowHTML;
+      
+      if(row.position && row.position.coords)
+      {
+        var map = new OpenLayers.Map("mapdiv"+mapCounter++);
+        map.addLayer(new OpenLayers.Layer.OSM());
+     
+        var lonLat = new OpenLayers.LonLat( row.positions.coords.longitude, row.positions.coords.latitude )
+              .transform(
+                new OpenLayers.Projection("EPSG:4326"), // transform from WGS 1984
+                map.getProjectionObject() // to Spherical Mercator Projection
+              );
+     
+        var zoom=16;
+     
+        var markers = new OpenLayers.Layer.Markers( "Markers" );
+        map.addLayer(markers);
+     
+        markers.addMarker(new OpenLayers.Marker(lonLat));
+     
+        map.setCenter (lonLat, zoom);
+      }
+      mapcounter++
     }
     $(".main-table").html(html);
   }
