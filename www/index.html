@@ -31,13 +31,21 @@
         <meta name="msapplication-tap-highlight" content="no" />
         
         <script src="js/jquery-2.1.4.js"></script>
-		  <script type="text/javascript" src="https://cdn.firebase.com/js/client/1.1.1/firebase.js"></script>
+		  <script type="text/javascript" src="js/firebase.js"></script>
 		  <script type="text/javascript" src="cordova.js"></script>
 		  <script type="text/javascript" src="js/app.js"></script>
+		  <script type="text/javascript" src="js/appconfig.js"></script>
 		  <script src="js/mstranslator.js"></script>
         <title>ConneX</title>
         
         <script>
+        var myFirebaseRef;
+        if(!window.firebaseURL)
+        	alert("www/js/appconfig.js is missing. You must sign up for firebase and azure accounts and put the keys in this file");
+        else{
+        myFirebaseRef = new Firebase(firebaseURL);
+        	alert("OK");
+        }
         </script>
     </head>
     <body>
@@ -92,6 +100,7 @@ function onDeviceReady() {
     recognition.onresult = function(event) {
         if (event.results.length > 0) {
             q.value = event.results[0][0].transcript;
+            
             q.form.submit();
         }
     }
