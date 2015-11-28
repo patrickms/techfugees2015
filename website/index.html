@@ -92,13 +92,13 @@
       k = keys[i];
       row=data[k];
       rowHTML=tableRowPrototype;
-      rowHTML=rowHTML.replace("$ID",k);
-      rowHTML=rowHTML.replace("$USER",row.user);
-      rowHTML=rowHTML.replace("$ENGLISH_QUESTION",row.englishquestion || "<No English question>");
-      rowHTML=rowHTML.replace("$NATIVE_QUESTION",row.nativequestion || "<No native language question>");
-      rowHTML=rowHTML.replace("$ENGLISH_ANSWER",row.englishanswer ||"<No English answer>");
-      rowHTML=rowHTML.replace("$NATIVE_ANSWER",row.nativeanswer ||"<No native language answer>");
-      rowHTML=rowHTML.replace("$NATIVE_LANG",row.nativelanguage ||"<Language unknown>");
+      rowHTML=rowHTML.replace(/\$ID/g,k);
+      rowHTML=rowHTML.replace(/\$USER/g,row.user);
+      rowHTML=rowHTML.replace(/\$ENGLISH_QUESTION/g,row.englishquestion || "<No English question>");
+      rowHTML=rowHTML.replace(/\$NATIVE_QUESTION/g,row.nativequestion || "<No native language question>");
+      rowHTML=rowHTML.replace(/\$ENGLISH_ANSWER/g,row.englishanswer ||"<No English answer>");
+      rowHTML=rowHTML.replace(/\$NATIVE_ANSWER/g,row.nativeanswer ||"<No native language answer>");
+      rowHTML=rowHTML.replace(/\$NATIVE_LANG/g,row.nativelanguage ||"<Language unknown>");
       html+=rowHTML;
     }
     $(".main-table").html(html);
