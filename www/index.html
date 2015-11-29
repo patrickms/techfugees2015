@@ -30,6 +30,13 @@
         <link rel="stylesheet" href="css/marketing.css">
         <meta name="msapplication-tap-highlight" content="no" />
         
+        <style>
+	        .answergrid
+	        {
+	        	width:100%
+	        }
+        </style>
+        
         <script src="js/jquery-2.1.4.js"></script>
 		  <script type="text/javascript" src="js/firebase.js"></script>
 		  <script type="text/javascript" src="cordova.js"></script>
@@ -40,22 +47,22 @@
         
         <script>
         var language="en";
-        function getSpeechLanguage()
+        function getSpeechLanguage(lang)
         {
 			var speechLanguages={ "en":"en-US", "es":"es-US", "zh":"zh-CN", "ar":"ar-AE" };
-        	return speechLanguages[language];
+        	return speechLanguages[lang || language];
         }
-        function getTranslationLanguage()
+        function getTranslationLanguage(lang)
         {
 	        var translateLanguages={ "en":"en", "es":"es", "zh":"zh-CHS", "ar":"ar" };
-        	return translateLanguages[language];
+        	return translateLanguages[lang || language];
         }
-        function getLanguageName()
+        function getLanguageName(lang)
         {
 	        var languageNames={ "en":"English", "es":"español", "zh":"中文", "ar":"العربية" };
-        	return languageNames[language];
+        	return languageNames[lang || language];
 	    }
-        function getLocalString( message )
+        function getLocalString( message, lang )
         {
 			var localStrings={
 				"en": {
@@ -71,7 +78,7 @@
 						"didyousay": '你说的 "<XYZ>"?',
 					},
 			};
-        	return localStrings[language][message];
+        	return localStrings[lang || language][message];
 	    }
         </script>
         <script>
@@ -101,8 +108,10 @@
 					success: function(data){
 						var data2=JSON.parse(data);
 						if(data2.startsWith("ArgumentException: The incoming token has expired"))
+						{
+							bingTranslateToken=null;
 							translate(from, to, text, nextFunction);
-						else
+						} else
 							nextFunction(data2);
 					},
 					datatype: "text",
@@ -194,6 +203,29 @@
 			} else
 				$(".accept-question-button").addClass("pure-button-disabled");
 		}
+		
+		function speak(words, lang)
+		{
+			if(window.speechSynthesis)
+			{
+				window.speechSynthesis.cancel();
+				var msg = new SpeechSynthesisUtterance();
+				//var voices = window.speechSynthesis.getVoices();
+				//msg.voice = voices[10]; // Note: some voices don't support altering params
+				//msg.voiceURI = 'native';
+				msg.volume = 1; // 0 to 1
+				msg.rate = 1; // 0.1 to 10
+				msg.pitch = 1; //0 to 2
+				msg.text = words;
+				msg.lang = getSpeechLanguage(lang);
+
+				msg.onend = function(e) {
+				  console.log('Finished in ' + event.elapsedTime + ' seconds.');
+				};
+
+				speechSynthesis.speak(msg);
+			}
+		}
 
 		function setupRecognition()
 		{
@@ -206,21 +238,7 @@
 					setTranslated(false);
 					if (event.results.length > 0) {
 						var result = event.results[0][0].transcript;
-						var msg = new SpeechSynthesisUtterance();
-						//var voices = window.speechSynthesis.getVoices();
-						//msg.voice = voices[10]; // Note: some voices don't support altering params
-						//msg.voiceURI = 'native';
-						msg.volume = 1; // 0 to 1
-						msg.rate = 1; // 0.1 to 10
-						msg.pitch = 1; //0 to 2
-						msg.text = getLocalString("didyousay").replace("<XYZ>",result);
-						msg.lang = getSpeechLanguage();
-
-						msg.onend = function(e) {
-						  console.log('Finished in ' + event.elapsedTime + ' seconds.');
-						};
-
-						speechSynthesis.speak(msg);
+						speak(getLocalString("didyousay").replace("<XYZ>",result), language);
 						$(".native-q").val( result );
 						$(".ask-button").hide();
 						$(".ask-results").show();
@@ -238,18 +256,28 @@
 		{
 			$(".ask-results").hide();
 			$(".ask-button").show();
+			if(window.speechSynthesis)
+				window.speechSynthesis.cancel();
 		}
 		
 		function acceptQuestion()
 		{
 			$(".ask-results").hide();
+			if(window.speechSynthesis)
+				window.speechSynthesis.cancel();
+			var englishQuestion=$(".english-q").val();
 			var questionData={
-				"nativelanguage":getTranslationLanguage(),
+				"nativelanguage":language,
 				"nativequestion":$(".native-q").val(),
 				"englishquestion":$(".english-q").val(),
 				"position": userPosition,
 				"user": userId,
 			};
+			var ecl=englishQuestion.toLowerCase();
+			if(ecl.startsWith("what's the time") || ecl.startsWith("what is the time") || ecl.startsWith("what time is"))
+			{
+				questionData["englishanswer"]=""+new Date();
+			} 
 			var result=allQuestions.push(questionData);
 			var resultKey=result.key();
 			delete questionData.user;
@@ -259,7 +287,55 @@
 		
 		function myQuestionsUpdate(firebaseData)
 		{
-			questions=firebaseData.val();
+			data=firebaseData.val();
+			
+			var keys = [];
+			var k, i, len;
+  
+			for (k in data) {
+			  if (data.hasOwnProperty(k)) {
+				keys.push(k);
+			  }
+			}
+	
+			function descending(x, y)
+			{
+			  if(x<y)
+				return 1;
+			  else if(x>y)
+				return -1;
+			  else
+				return 0;
+			}
+	
+			keys.sort(descending);
+	
+			len = keys.length;
+	
+			var html = "<ul>\n";
+			var mapcounter=1;
+			for (i = 0; i < len; i++) {
+			  k = keys[i];
+			  row=data[k];
+			  if(row.nativequestion && row.nativequestion.length>0)
+			  {
+			  	if(row.nativeanswer && row.nativeanswer.length>0)
+			  	{
+			  		html+='<li><a onclick="speak(\''+row.nativeanswer+'\', \''+row.nativelanguage+'\')">'+row.nativeanswer+"</a>\n";
+			  	}
+			  	else if(row.englishanswer && row.englishanswer.length>0)
+			  	{
+			  		var lang=getTranslationLanguage(row.nativelanguage);
+			  		//Rely on firebase update events to bring the data back to us
+			  		(function(){
+			  			var constKey=k;
+			  			translate("en", lang, row.englishanswer, function(result){myQuestions.child(constKey).child("nativeanswer").set(result);});
+			  		})();
+			  	}
+			  }
+			}
+			html+="</ul>\n";
+			$(".answergrid").html(html);
 		}
 		
 		function onDeviceReady() {
@@ -286,6 +362,10 @@
 		
 		function startListening()
 		{
+			if(window.speechSynthesis)
+				window.speechSynthesis.cancel();
+			$(".native-q").val( "" );
+			$(".english-q").val( "" );
 			recognition.start();
 			updatePosition();
 		}
@@ -335,7 +415,7 @@
 				
 				<img class="ask-button" style="display:none;width:1in;height=1in;display: block;margin-left:auto;margin-right: auto" src="img/HAL9000.svg" onclick="startListening()"></img>
 					
-				<div class="ask-results" style="display:visible;width:100%"">
+				<div class="ask-results" style="display:none;width:100%"">
 					<input type="search" class="native-q" name="nativeQ" style="width:100%">
 					<input type="search" class="english-q" name="englishQ" style="width:100%">
 					<div class="pure-g" style="width:100%">
@@ -352,111 +432,16 @@
     </div>
 </div>
 <div class="content-wrapper">
-    <div class="content">
-        <h2 class="content-head is-center">Excepteur sint occaecat cupidatat.</h2>
-
-        <div class="pure-g">
-            <div class="l-box pure-u-1 ">
-
-                <h3 class="content-subhead">
-                    <i class="fa fa-rocket"></i>
-                    Get Started Quickly
-                </h3>
-                <p>
-                    Phasellus eget enim eu lectus faucibus vestibulum. Suspendisse sodales pellentesque elementum.
-                </p>
-            </div>
-            <div class="l-box pure-u-1 pure-u-md-1-2 pure-u-lg-1-4">
-                <h3 class="content-subhead">
-                    <i class="fa fa-mobile"></i>
-                    Responsive Layouts
-                </h3>
-                <p>
-                    Phasellus eget enim eu lectus faucibus vestibulum. Suspendisse sodales pellentesque elementum.
-                </p>
-            </div>
-            <div class="l-box pure-u-1 pure-u-md-1-2 pure-u-lg-1-4">
-                <h3 class="content-subhead">
-                    <i class="fa fa-th-large"></i>
-                    Modular
-                </h3>
-                <p>
-                    Phasellus eget enim eu lectus faucibus vestibulum. Suspendisse sodales pellentesque elementum.
-                </p>
-            </div>
-            <div class="l-box pure-u-1 pure-u-md-1-2 pure-u-lg-1-4">
-                <h3 class="content-subhead">
-                    <i class="fa fa-check-square-o"></i>
-                    Plays Nice
-                </h3>
-                <p>
-                    Phasellus eget enim eu lectus faucibus vestibulum. Suspendisse sodales pellentesque elementum.
-                </p>
-            </div>
-        </div>
-    </div>
-
-    <div class="ribbon l-box-lrg pure-g">
-        <div class="l-box-lrg is-center pure-u-1 pure-u-md-1-2 pure-u-lg-2-5">
-            <img class="pure-img-responsive" alt="File Icons" width="300" src="/img/common/file-icons.png">
-        </div>
-        <div class="pure-u-1 pure-u-md-1-2 pure-u-lg-3-5">
-
-            <h2 class="content-head content-head-ribbon">Laboris nisi ut aliquip.</h2>
-
-            <p>
-                Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
-                tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
-                quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
-                consequat. Duis aute irure dolor.
-            </p>
-        </div>
-    </div>
 
     <div class="content">
-        <h2 class="content-head is-center">Dolore magna aliqua. Uis aute irure.</h2>
-
-        <div class="pure-g">
-            <div class="l-box-lrg pure-u-1 pure-u-md-2-5">
-                <form class="pure-form pure-form-stacked">
-                    <fieldset>
-
-                        <label for="name">Your Name</label>
-                        <input id="name" type="text" placeholder="Your Name">
-
-
-                        <label for="email">Your Email</label>
-                        <input id="email" type="email" placeholder="Your Email">
-
-                        <label for="password">Your Password</label>
-                        <input id="password" type="password" placeholder="Your Password">
-
-                        <button type="submit" class="pure-button">Sign Up</button>
-                    </fieldset>
-                </form>
-            </div>
-
-            <div class="l-box-lrg pure-u-1 pure-u-md-3-5">
-                <h4>Contact Us</h4>
-                <p>
-                    Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
-                    tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
-                    quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
-                    consequat.
-                </p>
-
-                <h4>More Information</h4>
-                <p>
-                    Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
-                    tempor incididunt ut labore et dolore magna aliqua.
-                </p>
-            </div>
-        </div>
-
+		<div class="answergrid">
+		</div>
     </div>
 
     <div class="footer l-box is-center">
-        View the source of this layout to learn more. Made with love by the YUI Team.
+        This software was developed at the Techfugees Hackathon 2015 in Liverpool, NSW, Australia (remotely from New York).<p>
+        The code is open sourced at <a href="http://www.github.com/patrickms/techfugees2015">http://www.github.com/patrickms/techfugees2015</a>.<p>
+        The website is at <a href="http://patrickms.github.io/techfugees2015/website/">http://patrickms.github.io/techfugees2015/website/</a>.
     </div>
 
 </div>
